@@ -1,12 +1,12 @@
 [
         {
                 "id": "username1",
-                "label": "ItaliansSubs Username:",
+                "label": "ItalianSubs Username:",
                 "type": "text"
         },
         {
                 "id": "password1",
-                "label": "ItaliansSubs Password:",
+                "label": "ItalianSubs Password:",
                 "type": "text",
                 "option": "hidden"
         }
