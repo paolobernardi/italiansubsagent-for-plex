@@ -1,0 +1,13 @@
+[
+        {
+                "id": "username1",
+                "label": "ItaliansSubs Username:",
+                "type": "text"
+        },
+        {
+                "id": "password1",
+                "label": "ItaliansSubs Password:",
+                "type": "text",
+                "option": "hidden"
+        }
+]

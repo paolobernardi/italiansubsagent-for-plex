@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.plexapp.agents.italiansubs</string>
+	<key>PlexFrameworkVersion</key>
+	<string>2</string>
+	<key>PlexPluginClass</key>
+	<string>Agent</string>
+    <key>PlexAgentAttributionText</key>
+    <string>Plex agent for &lt;a href=&quot;http://www.italiansubs.net/&quot;&gt;ItalianSubs&lt;/a&gt;, the Italian community of the subtitles. It retrieves automatically the italian subtitle of your TV Shows from ItalianSubs. Please, you have to be registered at the website and insert your login credentials.
+
+    Created by Paolo Bernardi</string>
+</dict>
+</plist>
