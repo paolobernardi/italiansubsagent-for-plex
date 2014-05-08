@@ -6,6 +6,11 @@ from os.path import basename
 from __builtin__ import sum
 from base64 import b64decode
 
+try:
+  from HTMLParser import HTMLParser
+except ImportError:
+  from html.parser import HTMLParser
+
 
 #API LINK ITASA PER DOWNLOAD
 PLUGIN_NAME = 'ItaliansSubsAgent'
@@ -62,8 +67,8 @@ def verify_specialcase(filename):
   filename = basename(filename).lower()
   searches = {  'web-dl': re.search('web|webdl|web-dl', filename), 
                 'dvdrip': re.search('dvd|dvdrip', filename), 
-                'bluray': re.search('bluray|blueray|bdrip|brip', filename),
-                #'bdrip': re.search('bdrip', filename),
+                'bluray': re.search('bluray|blueray', filename),
+                'bdrip': re.search('bdrip|brip', filename),
                 '720p': re.search('720', filename),
                 '1080p': re.search('1080p', filename),
                 '1080i': re.search('1080i', filename),
@@ -102,9 +107,17 @@ def get_authcode_itasubs(username=None, password=None):
     status = XML.ElementFromURL(ITASA_USER.format(authcode, ITASA_KEY)).find('status').text
     if status == 'fail':
       Log.Debug('[ {} ] Authcode not valid. Getting authcode'.format(PLUGIN_NAME))
-      user = Prefs['username1']
-      pwd = Prefs['password1']
-      login = XML.ElementFromURL(ITASA_LOGIN.format(user, pwd, ITASA_KEY))
+      
+      if username is None or password is None:
+        username = Prefs['username1']
+        password = Prefs['password1']
+
+        #workaround for accented chars, inside preferences use htmlentities
+        parser = HTMLParser()
+        username = parser.unescape(username)
+        password = parser.unescape(password)
+      
+      login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY))
       if login.find('status').text == 'fail':
         Log.Debug('[ {} ] Fetching authcode failed. Error at login, verify username and passowrd'.format(PLUGIN_NAME))
         return None
@@ -118,6 +131,12 @@ def login_itasubs(username=None, password=None):
     if username is None or password is None:
       username = Prefs['username1']
       password = Prefs['password1']
+
+      #workaround for accented chars, inside preferences use htmlentities instead of accented chars
+      parser = HTMLParser()
+      username = parser.unescape(username)
+      password = parser.unescape(password)
+    
     r = HTTP.Request('http://www.italiansubs.net/index.php', cacheTime=0)
     root = HTML.ElementFromString(r.content)
     login_form = root.get_element_by_id('form-login')

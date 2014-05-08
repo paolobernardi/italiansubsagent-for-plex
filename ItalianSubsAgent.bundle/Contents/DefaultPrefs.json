@@ -8,6 +8,7 @@
                 "id": "password1",
                 "label": "ItalianSubs Password:",
                 "type": "text",
-                "option": "hidden"
+                "option": "hidden",
+                "secure": "true"
         }
 ]
