@@ -87,6 +87,7 @@ def doSearch(name):
     f = prepare_name(name)
     shows = get_shows()
     priority = []
+    id_show = 0
     for name_s, id_s in shows:
         occurrences = sum([1 for el in f if el in name_s])
         priority.append( (occurrences, id_s) )
@@ -96,9 +97,10 @@ def doSearch(name):
         for each in priority:
           if each[0] == len(f):
             id_show = each[1]
-            Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-            return id_show #return id show
-    Log.Debug('[ {} ] No matches found for {}'.format(name))
+        id_show = id_show or priority[0][1]
+        Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
+        return id_show #return id show
+    Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
 def get_authcode_itasubs(username=None, password=None):
