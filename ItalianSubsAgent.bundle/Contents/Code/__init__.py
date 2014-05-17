@@ -106,7 +106,7 @@ def doSearch(name):
 def get_authcode_itasubs(username=None, password=None):
     Log.Debug('[ {} ] Testing authcode'.format(PLUGIN_NAME))
     authcode = Data.Load('authcode_itasa')
-    status = XML.ElementFromURL(ITASA_USER.format(authcode, ITASA_KEY)).find('status').text
+    status = XML.ElementFromURL(ITASA_USER.format(authcode, ITASA_KEY), cacheTime=0).find('status').text
     if status == 'fail':
       Log.Debug('[ {} ] Authcode not valid. Getting authcode'.format(PLUGIN_NAME))
       
@@ -119,7 +119,7 @@ def get_authcode_itasubs(username=None, password=None):
         username = parser.unescape(username)
         password = parser.unescape(password)
       
-      login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY))
+      login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY), cacheTime=0)
       if login.find('status').text == 'fail':
         Log.Debug('[ {} ] Fetching authcode failed. Error at login, verify username and passowrd'.format(PLUGIN_NAME))
         return None
@@ -179,7 +179,7 @@ def get_subtitle(id_s, season, episode, kind, name_show):
 
     pattern = season+'x'+episode
     season = '0'+season
-    subtitles = XML.ElementFromURL(ITASA_SUBTITLES.format(id_s, kind, ITASA_KEY))
+    subtitles = XML.ElementFromURL(ITASA_SUBTITLES.format(id_s, kind, ITASA_KEY), cacheTime=0)
     while True:
       for subtitle in subtitles.getiterator('subtitle'):
         # name_splitted = subtitle.find('name').text.rsplit('x', 1)[::-1]
@@ -208,10 +208,10 @@ def get_subtitle(id_s, season, episode, kind, name_show):
         next_page = False
       if next_page:
         Log.Debug('[ {} ] Subtitle still not found. Search in next page'.format(PLUGIN_NAME))
-        subtitles = XML.ElementFromURL(next_page)
+        subtitles = XML.ElementFromURL(next_page, cacheTime=0)
       elif kind != 'Normale':
         Log.Debug('[ {} ] Subtitle with special case {} not found. Switching to normal case'.format(PLUGIN_NAME, kind))
-        subtitles = XML.ElementFromURL(ITASA_SUBTITLES.format(id_s, 'Normale', ITASA_KEY))
+        subtitles = XML.ElementFromURL(ITASA_SUBTITLES.format(id_s, 'Normale', ITASA_KEY), cacheTime=0)
       else:
         Log.Debug('[ {} ] Subtitle NOT FOUND for s{}e{} of {}'.format(PLUGIN_NAME, season, episode, name_show))
         break
