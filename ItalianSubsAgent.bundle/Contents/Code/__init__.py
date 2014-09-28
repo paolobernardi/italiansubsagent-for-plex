@@ -33,8 +33,15 @@ def get_shows():
 
     results = []
     for tvshow in root.getiterator(tag='show'):
-        id_t = tvshow.find('id').text.strip()
-        name_t = tvshow.find('name').text.strip().lower()
+        #Log.Debug( '{0}, {1}'.format(tvshow.find('id').text, tvshow.find('name').text) )
+        try:
+          id_t = tvshow.find('id').text.strip()
+        except AttributeError:
+          continue
+        try:
+          name_t = tvshow.find('name').text.strip().lower()
+        except AttributeError:
+          continue
         results.append((name_t, id_t))
     
     if results:
