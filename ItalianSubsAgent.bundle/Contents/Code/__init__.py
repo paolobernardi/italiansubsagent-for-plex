@@ -203,10 +203,10 @@ def get_subtitle(id_s, season, episode, kind, name_show):
           Log.Debug('[ {} ] Subtitle s{}e{} of {} found!'.format(PLUGIN_NAME, season, episode, name_show))
           id_file = subtitle.find('id').text.strip()
           break
-        if 'completa' in name and season in name:
-          Log.Debug('[ {} ] Found complete archive of season {} of {}'.format(PLUGIN_NAME,season, name_show))
-          id_file = subtitle.find('id').text.strip()
-          break
+        # if 'completa' in name and season in name:
+        #   Log.Debug('[ {} ] Found complete archive of season {} of {}'.format(PLUGIN_NAME,season, name_show))
+        #   id_file = subtitle.find('id').text.strip()
+        #   break
       if id_file:
         break
       try:
@@ -244,12 +244,12 @@ def unzip(bfr, episode=None):
     if episode:
       search = re.search(regex_episode, name)
       if search:
-        if search.group('episode') == episode:
+        if int(search.group('episode')) == int(episode):
           subtitle = z.open(name)
           Log.Debug('[ {} ] Subtitle extracted successfully'.format(PLUGIN_NAME))
           return subtitle.read()
-    subtitle = z.open(name)
-    return subtitle.read()
+    #subtitle = z.open(name)
+    #return subtitle.read()
   Log.Debug('[ {} ] Error during extraction'.format(PLUGIN_NAME))
   return None
 
