@@ -160,7 +160,7 @@ def login_itasubs(username=None, password=None):
 
     Log.Debug('[ {} ] Testing cookies if they are still valid'.format(PLUGIN_NAME))
 
-    if 'ciao '+Prefs['username1'] in login_form.text_content().lower():
+    if 'ciao '+Prefs['username1'].lower() in login_form.text_content().lower():
       Log.Debug('[ {} ] Cookies are valid. Login OK'.format(PLUGIN_NAME))
       return None
 
