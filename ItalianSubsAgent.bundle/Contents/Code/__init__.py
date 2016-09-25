@@ -14,7 +14,7 @@ except ImportError:
 
 #API LINK ITASA PER DOWNLOAD
 PLUGIN_NAME = 'ItaliansSubsAgent'
-ITASA_KEY = 'M2YzYWM4MTM4YTMzOWZkNGVkMjllZWZjZWU3NWE4YmI='
+ITASA_KEY = 'ZDJjYmJjY2FiYzAyZWIwNTJjMGI3NDQyYWEwN2U3OGQ='
 ITASA_SHOWS = 'https://api.italiansubs.net/api/rest/shows?apikey={}'
 ITASA_SHOW = 'https://api.italiansubs.net/api/rest/shows/{}?apikey={}'
 ITASA_LOGIN = 'https://api.italiansubs.net/api/rest/users/login?username={}&password={}&apikey={}'
@@ -25,7 +25,7 @@ ITASA_SUBTITLE_DOWNLOAD = 'https://api.italiansubs.net/api/rest/subtitles/downlo
 def Start():
   HTTP.CacheTime = CACHE_1DAY * 7
   Log.Debug('ItaSubsAgent started!')
-  HTTP.Headers['User-Agent'] = 'ItalianSubs Plugin for Plex'
+  HTTP.Headers['User-Agent'] = 'ItalianSubs Plugin for Plex (v2)'
 
 def get_shows():
     Log.Debug('[ {} ] Getting shows list from ItalianSubs'.format(PLUGIN_NAME))
@@ -102,19 +102,17 @@ def doSearch(name, tvdb_id):
     if priority:
         #show = sorted(priority, key=lambda x: x[0], reverse=True)[0][1]
         priority = sorted(priority, key=lambda x: x[0], reverse=True)
-        for each in priority:
+        for each in priority[:10]:
           if tvdb_id:
-            tvdb_id_occurrence = XML.ElementFromURL(ITASA_SHOW.format(each[1], ITASA_KEY)).find('.//id_tvdb').text
+            try:
+              tvdb_id_occurrence = XML.ElementFromURL(ITASA_SHOW.format(each[1], ITASA_KEY)).find('.//id_tvdb').text
+            except:
+              Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
+              continue
             if tvdb_id == tvdb_id_occurrence:
               id_show = each[1]
-              break
-          else:
-            if each[0] == len(f):
-              id_show = each[1]
-              break
-        id_show = id_show or priority[0][1]
-        Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-        return id_show #return id show
+              Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
+              return id_show
     Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
@@ -250,7 +248,7 @@ def unzip(bfr, episode=None):
   regex_episode = re.compile('s(?P<season>\d+)e(?P<episode>\d+)')
   for name in z.namelist():
     if episode:
-      search = re.search(regex_episode, name)
+      search = re.search(regex_episode, name.lower())
       if search:
         if int(search.group('episode')) == int(episode):
           subtitle = z.open(name)
