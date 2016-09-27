@@ -12,7 +12,6 @@ except ImportError:
   from html.parser import HTMLParser
 
 
-#API LINK ITASA PER DOWNLOAD
 PLUGIN_NAME = 'ItaliansSubsAgent'
 ITASA_KEY = 'ZDJjYmJjY2FiYzAyZWIwNTJjMGI3NDQyYWEwN2U3OGQ='
 ITASA_SHOWS = 'https://api.italiansubs.net/api/rest/shows?apikey={}'
@@ -34,7 +33,6 @@ def get_shows():
 
     results = []
     for tvshow in root.getiterator(tag='show'):
-        #Log.Debug( '{0}, {1}'.format(tvshow.find('id').text, tvshow.find('name').text) )
         try:
           id_t = tvshow.find('id').text.strip()
         except AttributeError:
@@ -61,15 +59,6 @@ def prepare_name(f):
         results.append(each)
     return results
 
-# def get_resolution(heightVideo):
-#   heightVideo = int(heightVideo)
-#   if heightVideo >= 1080:
-#     return '1080p'
-#   elif heightVideo >= 720:
-#     return '720p'
-#   else:
-#     return 'Normale'
-#   return 'Normale'
 
 def verify_specialcase(filename):
   filename = basename(filename).lower()
@@ -89,6 +78,7 @@ def verify_specialcase(filename):
       return key
   Log.Debug('[ {} ] There is not special case for {}'.format(PLUGIN_NAME, filename))
   return 'Normale'
+
 
 def doSearch(name, tvdb_id):
     Log.Debug('[ {} ] Searching the show {} among ItalianSubs shows'.format(PLUGIN_NAME,name))
@@ -116,6 +106,7 @@ def doSearch(name, tvdb_id):
     Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
+
 def get_authcode_itasubs(username=None, password=None):
     Log.Debug('[ {} ] Testing authcode'.format(PLUGIN_NAME))
     authcode = Data.Load('authcode_itasa')
@@ -141,6 +132,7 @@ def get_authcode_itasubs(username=None, password=None):
       Log.Debug('[ {} ] Got authcode. It is saved'.format(PLUGIN_NAME))
     Log.Debug('[ {} ] Authcode OK'.format(PLUGIN_NAME))
     return authcode
+
 
 def login_itasubs(username=None, password=None):
     if username is None or password is None:
@@ -177,7 +169,9 @@ def login_itasubs(username=None, password=None):
     Log.Debug('[ {} ] Login done. Cookies saved'.format(PLUGIN_NAME))
     return None
 
+
 ITASA_KEY = b64decode(ITASA_KEY)
+
 
 def get_subtitle(id_s, season, episode, kind, name_show):
 
@@ -195,24 +189,11 @@ def get_subtitle(id_s, season, episode, kind, name_show):
     subtitles = XML.ElementFromURL(ITASA_SUBTITLES.format(id_s, kind, ITASA_KEY), cacheTime=0)
     while True:
       for subtitle in subtitles.getiterator('subtitle'):
-        # name_splitted = subtitle.find('name').text.rsplit('x', 1)[::-1]
-        # try:
-        #   subtitle_season, subtitle_episode = name_splitted[1][-1].strip(), name_splitted[0].strip()
-        # except IndexError:
-        #   continue
-        # if season == subtitle_season and episode == subtitle_episode:
-        #   Log.Debug('Sottotitolo trovato')
-        #   id_file = subtitle.find('id').text
-        #   break
         name = subtitle.find('name').text.lower().strip()
         if pattern in name:
           Log.Debug('[ {} ] Subtitle s{}e{} of {} found!'.format(PLUGIN_NAME, season, episode, name_show))
           id_file = subtitle.find('id').text.strip()
           break
-        # if 'completa' in name and season in name:
-        #   Log.Debug('[ {} ] Found complete archive of season {} of {}'.format(PLUGIN_NAME,season, name_show))
-        #   id_file = subtitle.find('id').text.strip()
-        #   break
       if id_file:
         break
       try:
@@ -254,20 +235,12 @@ def unzip(bfr, episode=None):
           subtitle = z.open(name)
           Log.Debug('[ {} ] Subtitle extracted successfully'.format(PLUGIN_NAME))
           return subtitle.read()
-    #subtitle = z.open(name)
-    #return subtitle.read()
   Log.Debug('[ {} ] Error during extraction'.format(PLUGIN_NAME))
   return None
 
 def search_subtitle(name, filename, season, episode, tvdb_id):
-  
   id_show = doSearch(name, tvdb_id)
-  #kind = get_resolution(heightVideo)
-  #special = verify_specialcase(filename)
   kind = verify_specialcase(filename)
-  # if special:
-  #   kind = special
-  
   if id_show:
     subtitle = get_subtitle(id_show, season, episode, kind, name)
     if subtitle:
@@ -284,8 +257,6 @@ class ItalianSubsAgent(Agent.TV_Shows):
   name = 'ItalianSubsAgent'
   languages = [Locale.Language.English, ]
   primary_provider = False
-  #accepts_from = ['com.plexapp.agents.localmedia', 'com.plexapp.agents.thetvdb']
-  #contributes_to = ['com.plexapp.agents.thetvdb']
 
   def search(self, results, media, lang, manual=True):
     results.Append(MetadataSearchResult(id = 'null', score = 100))
@@ -297,11 +268,6 @@ class ItalianSubsAgent(Agent.TV_Shows):
       for e in media.seasons[s].episodes:
         for i in media.seasons[s].episodes[e].items:
           for part in i.parts:
-            # for stream in part.streams:
-            #   try:
-            #     heightVideo = stream.height
-            #   except AttributeError:
-            #     pass
             name = media.title
             filename = part.file
             season = str(s)
@@ -311,12 +277,6 @@ class ItalianSubsAgent(Agent.TV_Shows):
               tvdb_id = media.guid.split('//')[::-1][0].split('?')[0].strip()
             else:
               tvdb_id = None
-            
-            # try:
-            #   heightVideo
-            # except:
-            #   heightVideo = 0
-
             subtitle = search_subtitle(name, filename, season, episode, tvdb_id)
             if subtitle:
               subtitle_url, subtitle_contents = subtitle
@@ -324,4 +284,3 @@ class ItalianSubsAgent(Agent.TV_Shows):
               part.subtitles['it'][subtitle_url] = Proxy.Media(subtitle_contents, ext='srt')
             else:
               Log.Debug('[ {} ] Subtitle for {} s{}e{} ({}) NOT available, sorry! :('.format(PLUGIN_NAME,name, season, episode, basename(filename)))
-
