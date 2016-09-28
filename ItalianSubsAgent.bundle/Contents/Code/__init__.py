@@ -11,6 +11,8 @@ try:
 except ImportError:
   from html.parser import HTMLParser
 
+from difflib import SequenceMatcher
+
 
 PLUGIN_NAME = 'ItaliansSubsAgent'
 ITASA_KEY = 'ZDJjYmJjY2FiYzAyZWIwNTJjMGI3NDQyYWEwN2U3OGQ='
@@ -38,7 +40,7 @@ def get_shows():
         except AttributeError:
           continue
         try:
-          name_t = tvshow.find('name').text.strip().lower()
+          name_t = tvshow.find('name').text.strip()
         except AttributeError:
           continue
         results.append((name_t, id_t))
@@ -81,28 +83,32 @@ def verify_specialcase(filename):
 
 
 def doSearch(name, tvdb_id):
-    Log.Debug('[ {} ] Searching the show {} among ItalianSubs shows'.format(PLUGIN_NAME,name))
-    f = prepare_name(name)
+    Log.Debug('[ {} ] Searching the show {} in ItalianSubs shows'.format(PLUGIN_NAME,name))
     shows = get_shows()
-    priority = []
-    id_show = 0
-    for name_s, id_s in shows:
-        occurrences = sum([1 for el in f if el in name_s])
-        priority.append( (occurrences, id_s) )
-    if priority:
-        #show = sorted(priority, key=lambda x: x[0], reverse=True)[0][1]
-        priority = sorted(priority, key=lambda x: x[0], reverse=True)
-        for each in priority[:10]:
-          if tvdb_id:
-            try:
-              tvdb_id_occurrence = XML.ElementFromURL(ITASA_SHOW.format(each[1], ITASA_KEY)).find('.//id_tvdb').text
-            except:
-              Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-              continue
-            if tvdb_id == tvdb_id_occurrence:
-              id_show = each[1]
-              Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-              return id_show
+    res = []
+    junk = lambda x: x in ' of the'
+    for name_show, id_show in shows:
+      show_score = SequenceMatcher(junk, name, name_show).ratio()
+      show_score = round(show_score * 100, 3)
+      res.append((show_score, name_show, id_show))
+    res = sorted(res, key=lambda x: -x[0])[:10]
+    Log.Debug('[ {} ] Best show found: {}'.format(PLUGIN_NAME, res))
+    for show_score, name_show, id_show in res:
+      try:
+        if tvdb_id == XML.ElementFromURL(ITASA_SHOW.format(id_show, ITASA_KEY)).find('.//id_tvdb').text:
+          Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME,name, id_show))
+          return id_show
+      except:
+        Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
+        continue
+    try:
+      show_score, name_show, id_show = res[0]
+    except IndexError:
+      pass
+    else:
+      if show_score > 75:
+        Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>75) method)'.format(PLUGIN_NAME,name, id_show))
+        return id_show
     Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
