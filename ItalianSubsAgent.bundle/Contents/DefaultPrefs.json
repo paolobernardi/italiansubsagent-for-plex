@@ -10,5 +10,18 @@
                 "type": "text",
                 "option": "hidden",
                 "secure": "true"
-        }
+        },
+        {
+                "id": "all_subs",
+                "label": "Get all subtititles (720, 1080, web-dl ..)",
+                "type": "bool",
+                "secure": "false"
+        },
+        {
+                "id": "copy_subs",
+                "label": "Copy (and rename) .srt subtitle alongside the movie file",
+                "type": "bool",
+                "secure": "false"
+        },
+
 ]
