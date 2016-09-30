@@ -7,9 +7,9 @@ from __builtin__ import dir
 from base64 import b64decode
 from difflib import SequenceMatcher
 try:
-  from HTMLParser import HTMLParser
+    from HTMLParser import HTMLParser
 except ImportError:
-  from html.parser import HTMLParser
+    from html.parser import HTMLParser
 
 
 PLUGIN_NAME = 'ItaliansSubsAgent'
@@ -24,9 +24,9 @@ ITASA_SUBTITLE_DOWNLOAD = 'https://api.italiansubs.net/api/rest/subtitles/downlo
 
 
 def Start():
-  HTTP.CacheTime = CACHE_1DAY * 7
-  Log.Debug('ItaSubsAgent started!')
-  HTTP.Headers['User-Agent'] = 'ItalianSubs Plugin for Plex (v2)'
+    HTTP.CacheTime = CACHE_1DAY * 7
+    Log.Debug('ItaSubsAgent started!')
+    HTTP.Headers['User-Agent'] = 'ItalianSubs Plugin for Plex (v2)'
 
 def get_shows():
     Log.Debug('[ {} ] Getting shows list from ItalianSubs'.format(PLUGIN_NAME))
@@ -44,11 +44,10 @@ def get_shows():
         except AttributeError:
           continue
         results.append((name_t, id_t))
-    
     if results:
-      Log.Debug('[ {} ] Fetching done. There are {} shows'.format(PLUGIN_NAME, len(results)))
+        Log.Debug('[ {} ] Fetching done. There are {} shows'.format(PLUGIN_NAME, len(results)))
     else:
-      Log.Debug('[ {} ]Fetching failed'.format(PLUGIN_NAME))    
+        Log.Debug('[ {} ]Fetching failed'.format(PLUGIN_NAME))    
     return results
 
 def doSearch(name, tvdb_id):
@@ -57,27 +56,27 @@ def doSearch(name, tvdb_id):
     res = []
     junk = lambda x: x in ' of the'
     for name_show, id_show in shows:
-      show_score = SequenceMatcher(junk, name, name_show).ratio()
-      show_score = round(show_score * 100, 3)
-      res.append((show_score, name_show, id_show))
+        show_score = SequenceMatcher(junk, name, name_show).ratio()
+        show_score = round(show_score * 100, 3)
+        res.append((show_score, name_show, id_show))
     res = sorted(res, key=lambda x: -x[0])[:10]
     Log.Debug('[ {} ] Best show found: {}'.format(PLUGIN_NAME, res))
     for show_score, name_show, id_show in res:
-      try:
-        if tvdb_id == XML.ElementFromURL(ITASA_SHOW.format(id_show, ITASA_KEY)).find('.//id_tvdb').text:
-          Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME,name, id_show))
-          return id_show
-      except:
-        Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-        continue
+        try:
+            if tvdb_id == XML.ElementFromURL(ITASA_SHOW.format(id_show, ITASA_KEY)).find('.//id_tvdb').text:
+                Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME,name, id_show))
+            return id_show
+        except:
+            Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
+            continue
     try:
-      show_score, name_show, id_show = res[0]
+        show_score, name_show, id_show = res[0]
     except IndexError:
-      pass
+        pass
     else:
-      if show_score > 75:
-        Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>75) method)'.format(PLUGIN_NAME,name, id_show))
-        return id_show
+        if show_score > 75:
+            Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>75) method)'.format(PLUGIN_NAME,name, id_show))
+            return id_show
     Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
@@ -86,37 +85,37 @@ def get_authcode_itasubs(username=None, password=None):
     authcode = Data.Load('authcode_itasa')
     status = XML.ElementFromURL(ITASA_USER.format(authcode, ITASA_KEY), cacheTime=0).find('status').text
     if status == 'fail':
-      Log.Debug('[ {} ] Authcode not valid. Getting authcode'.format(PLUGIN_NAME))
+        Log.Debug('[ {} ] Authcode not valid. Getting authcode'.format(PLUGIN_NAME))
       
-      if username is None or password is None:
-        username = Prefs['username1']
-        password = Prefs['password1']
+        if username is None or password is None:
+            username = Prefs['username1']
+            password = Prefs['password1']
 
-        #workaround for accented chars, inside preferences use htmlentities
-        parser = HTMLParser()
-        username = parser.unescape(username)
-        password = parser.unescape(password)
+            #workaround for accented chars, inside preferences use htmlentities
+            parser = HTMLParser()
+            username = parser.unescape(username)
+            password = parser.unescape(password)
       
-      login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY), cacheTime=0)
-      if login.find('status').text == 'fail':
-        Log.Debug('[ {} ] Fetching authcode failed. Error at login, verify username and passowrd'.format(PLUGIN_NAME))
-        return None
-      authcode = login.find('.//authcode').text
-      Data.Save('authcode_itasa', authcode)
-      Log.Debug('[ {} ] Got authcode. It is saved'.format(PLUGIN_NAME))
+        login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY), cacheTime=0)
+        if login.find('status').text == 'fail':
+            Log.Debug('[ {} ] Fetching authcode failed. Error at login, verify username and passowrd'.format(PLUGIN_NAME))
+            return None
+        authcode = login.find('.//authcode').text
+        Data.Save('authcode_itasa', authcode)
+        Log.Debug('[ {} ] Got authcode. It is saved'.format(PLUGIN_NAME))
     Log.Debug('[ {} ] Authcode OK'.format(PLUGIN_NAME))
     return authcode
 
 
 def login_itasubs(username=None, password=None):
     if username is None or password is None:
-      username = Prefs['username1']
-      password = Prefs['password1']
+        username = Prefs['username1']
+        password = Prefs['password1']
 
-      #workaround for accented chars, inside preferences use htmlentities instead of accented chars
-      parser = HTMLParser()
-      username = parser.unescape(username)
-      password = parser.unescape(password)
+        #workaround for accented chars, inside preferences use htmlentities instead of accented chars
+        parser = HTMLParser()
+        username = parser.unescape(username)
+        password = parser.unescape(password)
     
     r = HTTP.Request('http://www.italiansubs.net/index.php', cacheTime=0)
     root = HTML.ElementFromString(r.content)
@@ -125,9 +124,8 @@ def login_itasubs(username=None, password=None):
     Log.Debug('[ {} ] Testing cookies if they are still valid'.format(PLUGIN_NAME))
 
     if 'ciao '+Prefs['username1'].lower() in login_form.text_content().lower():
-      Log.Debug('[ {} ] Cookies are valid. Login OK'.format(PLUGIN_NAME))
-      return None
-
+        Log.Debug('[ {} ] Cookies are valid. Login OK'.format(PLUGIN_NAME))
+        return None
     Log.Debug('[ {} ] Cookies not valid or expired. Trying to login'.format(PLUGIN_NAME))
     
     data = {}
@@ -148,171 +146,171 @@ ITASA_KEY = b64decode(ITASA_KEY)
 
 
 class Subtitles(object):
-  def __init__(self, id_show, name_show, filename, season, episode):
-    self.id_show = id_show
-    self.name_show = name_show
-    self.filename = filename
-    self.season = '{season}'.format(season=season)
-    self.episode = '{episode}'.format(episode=episode.zfill(2))
-    self.specialcase = self.detect_specialcase()
-    Log.Debug('[ {} ] Found special case: {}'.format(PLUGIN_NAME, self.specialcase)) if self.specialcase else ''
-    self.all_subs = Prefs['all_subs']
-    self.copy_subs = Prefs['copy_subs']
-    self.subtitles = []
+    def __init__(self, id_show, name_show, filename, season, episode):
+        self.id_show = id_show
+        self.name_show = name_show
+        self.filename = filename
+        self.season = '{season}'.format(season=season)
+        self.episode = '{episode}'.format(episode=episode.zfill(2))
+        self.specialcase = self.detect_specialcase()
+        Log.Debug('[ {} ] Found special case: {}'.format(PLUGIN_NAME, self.specialcase)) if self.specialcase else ''
+        self.all_subs = Prefs['all_subs']
+        self.copy_subs = Prefs['copy_subs']
+        self.subtitles = []
 
-  def detect_specialcase(self):
-    filename = os.path.basename(self.filename).lower()
-    if 'web' in filename:
-      return 'web-dl'
-    if 'dvd' in filename:
-      return 'dvdrip'
-    if 'bluray' in filename or 'blueray' in filename:
-      return 'bluray'
-    if 'brip' in filename or 'bdrip' in filename:
-      return 'bdrip'
-    if '720' in filename:
-      return '720p'
-    if '1080p' in filename:
-      return '1080p'
-    if '1080i' in filename:
-      return '1080i'
-    if '1080' in filename:
-      return '1080'
-    return None
+    def detect_specialcase(self):
+        filename = os.path.basename(self.filename).lower()
+        if 'web' in filename:
+            return 'web-dl'
+        if 'dvd' in filename:
+            return 'dvdrip'
+        if 'bluray' in filename or 'blueray' in filename:
+            return 'bluray'
+        if 'brip' in filename or 'bdrip' in filename:
+            return 'bdrip'
+        if '720' in filename:
+            return '720p'
+        if '1080p' in filename:
+            return '1080p'
+        if '1080i' in filename:
+            return '1080i'
+        if '1080' in filename:
+            return '1080'
+        return None
 
-  def search(self, complete=False):
-    query = '{season} completa'.format(season=self.season) if complete else '{season}x{episode}'.format(season=self.season, episode=self.episode)
-    subtitles = XML.ElementFromURL(ITASA_SUBTITLES_SEARCH.format(query=query, id_show=self.id_show, apikey=ITASA_KEY))
-    res = []
-    for subtitle in subtitles.getiterator('subtitle'):
-      res.append({
-        'id': subtitle.find('id').text,
-        'name': subtitle.find('name').text,
-        'version': subtitle.find('version').text.lower(),
-        'complete': complete,
-        'subs': []
-        })
-    return res
+    def search(self, complete=False):
+        query = '{season} completa'.format(season=self.season) if complete else '{season}x{episode}'.format(season=self.season, episode=self.episode)
+        subtitles = XML.ElementFromURL(ITASA_SUBTITLES_SEARCH.format(query=query, id_show=self.id_show, apikey=ITASA_KEY))
+        res = []
+        for subtitle in subtitles.getiterator('subtitle'):
+            res.append({
+                'id': subtitle.find('id').text,
+                'name': subtitle.find('name').text,
+                'version': subtitle.find('version').text.lower(),
+                'complete': complete,
+                'subs': []
+            })
+        return res
 
-  def filter(self, subtitles):
-    if self.all_subs:
-      return subtitles
-    if len(subtitles) < 2:
-      return subtitles
-    if self.specialcase:
-      subtitles = [sub for sub in subtitles if sub['version'] == self.specialcase]
-      if subtitles:
+    def filter(self, subtitles):
+        if self.all_subs:
+            return subtitles
+        if len(subtitles) < 2:
+            return subtitles
+        if self.specialcase:
+            subtitles = [sub for sub in subtitles if sub['version'] == self.specialcase]
+            if subtitles:
+                return subtitles
+        return [sub for sub in subtitles if sub['version'] == 'normale']
+
+    def download(self, subtitles):
+        authcode = get_authcode_itasubs()
+        login_itasubs()
+        for subtitle in subtitles:
+            url = ITASA_SUBTITLE_DOWNLOAD.format(subtitle['id'], authcode, ITASA_KEY)
+            file = HTTP.Request(url, cacheTime=0)
+            filebuffer = StringIO()
+            filebuffer.write(file)
+            filebuffer.flush()
+            Log.Debug('[ {} ] Subtitle {} (id: {}) downloaded!'.format(PLUGIN_NAME, subtitle['name'], subtitle['id']))
+            for sub_content in self.unzip(filebuffer):
+                sub_hash = hashlib.md5(sub_content).hexdigest()
+                subtitle['subs'].append((sub_hash, sub_content))
         return subtitles
-    return [sub for sub in subtitles if sub['version'] == 'normale']
 
-  def download(self, subtitles):
-    authcode = get_authcode_itasubs()
-    login_itasubs()
-    for subtitle in subtitles:
-      url = ITASA_SUBTITLE_DOWNLOAD.format(subtitle['id'], authcode, ITASA_KEY)
-      file = HTTP.Request(url, cacheTime=0)
-      filebuffer = StringIO()
-      filebuffer.write(file)
-      filebuffer.flush()
-      Log.Debug('[ {} ] Subtitle {} (id: {}) downloaded!'.format(PLUGIN_NAME, subtitle['name'], subtitle['id']))
-      for sub_content in self.unzip(filebuffer):
-        sub_hash = hashlib.md5(sub_content).hexdigest()
-        subtitle['subs'].append((sub_hash, sub_content))
-    return subtitles
-
-  def unzip(self, zipfile):
-    episode = 's{season}e{episode}'.format(season=self.season.zfill(2), episode=self.episode)
-    res = []
-    try:
-      zipfile = ZipFile(zipfile)
-    except:
-      Log.Debug('[ {} ] Error opening the ZipFile'.format(PLUGIN_NAME))
-      return res
-    for name_sub in zipfile.namelist():
-      if episode in name_sub.lower():
+    def unzip(self, zipfile):
+        episode = 's{season}e{episode}'.format(season=self.season.zfill(2), episode=self.episode)
+        res = []
         try:
-          sub_content = zipfile.open(name_sub).read()
+            zipfile = ZipFile(zipfile)
         except:
-          Log.Debug('[ {} ] Error extracting the subtitle from ZipFile'.format(PLUGIN_NAME))
-          continue
-        res.append(sub_content)
-        Log.Debug('[ {} ] Subtitle {} extracted!'.format(PLUGIN_NAME, name_sub))
-    if not res:
-      Log.Debug('[ {} ] Subtitle {}x{} for {} is not present in zipfile'.format(PLUGIN_NAME, self.season, self.episode))
-    return res
+            Log.Debug('[ {} ] Error opening the ZipFile'.format(PLUGIN_NAME))
+            return res
+        for name_sub in zipfile.namelist():
+            if episode in name_sub.lower():
+                try:
+                    sub_content = zipfile.open(name_sub).read()
+                except:
+                    Log.Debug('[ {} ] Error extracting the subtitle from ZipFile'.format(PLUGIN_NAME))
+                    continue
+                res.append(sub_content)
+                Log.Debug('[ {} ] Subtitle {} extracted!'.format(PLUGIN_NAME, name_sub))
+        if not res:
+            Log.Debug('[ {} ] Subtitle {}x{} for {} is not present in zipfile'.format(PLUGIN_NAME, self.season, self.episode))
+        return res
 
-  def save(self, subtitles):
-    Log.Debug('[ {} ] Copying subtitles for {}x{} alongside the file {}'.format(PLUGIN_NAME, self.season, self.episode, self.filename))
-    path, filename = os.path.split(self.filename)
-    filename, ext = os.path.splitext(filename)
-    i = 1
-    for subtitle in subtitles:
-      for sub_hash, sub_content in subtitle['subs']:
-        textToappend = '.it{}.srt'.format(i)
-        with io.open(os.path.join(path, filename + textToappend), 'wb') as f:
-          f.write(sub_content)
-        Log.Debug('[ {} ] Subtitle {} (Version: {}) copied in {}!'.format(PLUGIN_NAME, filename, subtitle['version'], path))
-        i += 1
+    def save(self, subtitles):
+        Log.Debug('[ {} ] Copying subtitles for {}x{} alongside the file {}'.format(PLUGIN_NAME, self.season, self.episode, self.filename))
+        path, filename = os.path.split(self.filename)
+        filename, ext = os.path.splitext(filename)
+        i = 1
+        for subtitle in subtitles:
+            for sub_hash, sub_content in subtitle['subs']:
+                textToappend = '.it{}.srt'.format(i)
+                with io.open(os.path.join(path, filename + textToappend), 'wb') as f:
+                    f.write(sub_content)
+                Log.Debug('[ {} ] Subtitle {} (Version: {}) copied in {}!'.format(PLUGIN_NAME, filename, subtitle['version'], path))
+                i += 1
 
-  def get(self):
-    Log.Debug('[ {} ] Searching subtitles for {} {}x{} ..'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
-    subtitles = self.search(complete=False)
-    subtitles_version = set([sub['version'] for sub in subtitles])
-    Log.Debug('[ {} ] Found {} subtitles (Version: {})'.format(PLUGIN_NAME, len(subtitles), ', '.join(subtitles_version)))
-    subtitles_complete = [sub for sub in self.search(complete=True) if sub['version'] not in subtitles_version]
-    Log.Debug('[ {} ] Found {} complete pack for season {} (Version: {})'.format(PLUGIN_NAME, len(subtitles_complete), self.season, ', '.join(set([sub['version'] for sub in subtitles_complete]))))
-    subtitles += subtitles_complete
-    subtitles = self.filter(subtitles)
-    Log.Debug('[ {} ] Subtitles filtered. Remaining {} subtitles (Version: {}, All subs: {}, Special Case: {})'.format(PLUGIN_NAME, len(subtitles), ', '.join([sub['version'] for sub in subtitles]), self.all_subs, self.specialcase))
-    if not subtitles:
-      Log.Debug('[ {} ] No subtitles found for {} {}x{}!'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
-      return self
-    Log.Debug('[ {} ] Start downloading subtitles...'.format(PLUGIN_NAME))
-    subtitles = self.download(subtitles)
-    if not [sub['subs'] for sub in subtitles if sub['subs']]:
-     Log.Debug('[ {} ] No subtitles found for {} {}x{}!'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
-     return self
-    if self.copy_subs:
-      self.save(subtitles)
-    self.subtitles = subtitles
-    return self
+    def get(self):
+        Log.Debug('[ {} ] Searching subtitles for {} {}x{} ..'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
+        subtitles = self.search(complete=False)
+        subtitles_version = set([sub['version'] for sub in subtitles])
+        Log.Debug('[ {} ] Found {} subtitles (Version: {})'.format(PLUGIN_NAME, len(subtitles), ', '.join(subtitles_version)))
+        subtitles_complete = [sub for sub in self.search(complete=True) if sub['version'] not in subtitles_version]
+        Log.Debug('[ {} ] Found {} complete pack for season {} (Version: {})'.format(PLUGIN_NAME, len(subtitles_complete), self.season, ', '.join(set([sub['version'] for sub in subtitles_complete]))))
+        subtitles += subtitles_complete
+        subtitles = self.filter(subtitles)
+        Log.Debug('[ {} ] Subtitles filtered. Remaining {} subtitles (Version: {}, All subs: {}, Special Case: {})'.format(PLUGIN_NAME, len(subtitles), ', '.join([sub['version'] for sub in subtitles]), self.all_subs, self.specialcase))
+        if not subtitles:
+            Log.Debug('[ {} ] No subtitles found for {} {}x{}!'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
+            return self
+        Log.Debug('[ {} ] Start downloading subtitles...'.format(PLUGIN_NAME))
+        subtitles = self.download(subtitles)
+        if not [sub['subs'] for sub in subtitles if sub['subs']]:
+            Log.Debug('[ {} ] No subtitles found for {} {}x{}!'.format(PLUGIN_NAME, self.name_show, self.season, self.episode))
+            return self
+        if self.copy_subs:
+            self.save(subtitles)
+        self.subtitles = subtitles
+        return self
 
-  def return_subtitles(self):
-    return [(sub_hash, sub_content) for subtitle in self.subtitles for sub_hash, sub_content in subtitle['subs']]
+    def return_subtitles(self):
+        return [(sub_hash, sub_content) for subtitle in self.subtitles for sub_hash, sub_content in subtitle['subs']]
 
 def get_tvdb_id(guid):
-  if 'thetvdb' not in guid:
-    return 0
-  try:
-    tvdb_id = guid.split('//')[::-1][0].split('?')[0].strip()
-  except:
-    return 0
-  return tvdb_id
+    if 'thetvdb' not in guid:
+        return 0
+    try:
+        tvdb_id = guid.split('//')[::-1][0].split('?')[0].strip()
+    except:
+        return 0
+    return tvdb_id
 
 
 class ItalianSubsAgent(Agent.TV_Shows):
-  name = 'ItalianSubsAgent'
-  languages = [Locale.Language.English, ]
-  primary_provider = False
+    name = 'ItalianSubsAgent'
+    languages = [Locale.Language.English, ]
+    primary_provider = False
 
-  def search(self, results, media, lang, manual=True):
-    results.Append(MetadataSearchResult(id='null', score=100))
+    def search(self, results, media, lang, manual=True):
+        results.Append(MetadataSearchResult(id='null', score=100))
 
-  def update(self, metadata, media, lang, force=True):
-    for season in media.seasons:
-      for episode in media.seasons[season].episodes:
-        for items in media.seasons[season].episodes[episode].items:
-          for part in items.parts:
-            season = str(season)
-            episode = str(episode)
-            name_show = media.title
-            tvdb_id = get_tvdb_id(media.guid)
-            filename = part.file
-            id_show = doSearch(name_show, tvdb_id)
-            if not id_show:
-              return None
-            subtitles = Subtitles(id_show, name_show, filename, season, episode).get().return_subtitles()
-            for sub_hash, sub_content in subtitles:
-              part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
-              Log.Debug('[ {} ] Subtitle for {} {}x{} added!'.format(PLUGIN_NAME, name_show, season, episode.zfill(2)))
+    def update(self, metadata, media, lang, force=True):
+        for season in media.seasons:
+            for episode in media.seasons[season].episodes:
+                for items in media.seasons[season].episodes[episode].items:
+                    for part in items.parts:
+                        season = str(season)
+                        episode = str(episode)
+                        name_show = media.title
+                        tvdb_id = get_tvdb_id(media.guid)
+                        filename = part.file
+                        id_show = doSearch(name_show, tvdb_id)
+                        if not id_show:
+                            return None
+                        subtitles = Subtitles(id_show, name_show, filename, season, episode).get().return_subtitles()
+                        for sub_hash, sub_content in subtitles:
+                            part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
+                            Log.Debug('[ {} ] Subtitle for {} {}x{} added!'.format(PLUGIN_NAME, name_show, season, episode.zfill(2)))
 
