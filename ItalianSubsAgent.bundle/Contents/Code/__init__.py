@@ -179,13 +179,15 @@ class Subtitles(object):
         subtitles = XML.ElementFromURL(ITASA_SUBTITLES_SEARCH.format(query=query, id_show=self.id_show, apikey=ITASA_KEY))
         res = []
         for subtitle in subtitles.getiterator('subtitle'):
-            res.append({
+            subtitle = {
                 'id': subtitle.find('id').text,
                 'name': subtitle.find('name').text,
                 'version': subtitle.find('version').text.lower(),
                 'complete': complete,
                 'subs': []
-            })
+            }
+            if subtitle not in res:
+                res.append(subtitle)
         return res
 
     def filter(self, subtitles):
