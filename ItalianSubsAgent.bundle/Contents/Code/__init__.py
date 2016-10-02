@@ -256,7 +256,7 @@ class Subtitles(object):
                 res.append(sub_content)
                 Log.Debug('[ {} ] Subtitle {} extracted!'.format(PLUGIN_NAME, name_sub))
         if not res:
-            Log.Debug('[ {} ] Subtitle {}x{} for {} is not present in zipfile'.format(PLUGIN_NAME, self.season, self.episode))
+            Log.Debug('[ {} ] Subtitle {}x{} for {} is not present in zipfile'.format(PLUGIN_NAME, self.season, self.episode, self.name_show))
         return res
 
     def save(self, subtitles):
