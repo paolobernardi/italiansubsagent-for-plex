@@ -80,66 +80,62 @@ def doSearch(name, tvdb_id):
     Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
     return None
 
-def get_authcode_itasubs(username=None, password=None):
-    Log.Debug('[ {} ] Testing authcode'.format(PLUGIN_NAME))
-    authcode = Data.Load('authcode_itasa')
-    status = XML.ElementFromURL(ITASA_USER.format(authcode, ITASA_KEY), cacheTime=0).find('status').text
-    if status == 'fail':
-        Log.Debug('[ {} ] Authcode not valid. Getting authcode'.format(PLUGIN_NAME))
-      
-        if username is None or password is None:
-            username = Prefs['username1']
-            password = Prefs['password1']
 
-            #workaround for accented chars, inside preferences use htmlentities
-            parser = HTMLParser()
-            username = parser.unescape(username)
-            password = parser.unescape(password)
-      
-        login = XML.ElementFromURL(ITASA_LOGIN.format(username, password, ITASA_KEY), cacheTime=0)
-        if login.find('status').text == 'fail':
-            Log.Debug('[ {} ] Fetching authcode failed. Error at login, verify username and passowrd'.format(PLUGIN_NAME))
-            return None
-        authcode = login.find('.//authcode').text
-        Data.Save('authcode_itasa', authcode)
-        Log.Debug('[ {} ] Got authcode. It is saved'.format(PLUGIN_NAME))
-    Log.Debug('[ {} ] Authcode OK'.format(PLUGIN_NAME))
-    return authcode
+class Login_Itasa(object):
+    LOGIN_URL = 'https://api.italiansubs.net/api/rest/users/login?username={username}&password={password}&apikey={apikey}'
+    USER_URL = 'https://api.italiansubs.net/api/rest/users/?authcode={authcode}&apikey={apikey}'
+    ITASA_HOME = 'http://www.italiansubs.net/'
 
+    def __init__(self):
+        self.get_credentials()
+        self.authcode = Data.Load('authcode_itasa')
 
-def login_itasubs(username=None, password=None):
-    if username is None or password is None:
+    def get_credentials(self):
+        Log.Debug('[ {} ] Loading Itasa credentials..'.format(PLUGIN_NAME))
         username = Prefs['username1']
         password = Prefs['password1']
-
-        #workaround for accented chars, inside preferences use htmlentities instead of accented chars
+        #workaround for accented chars, inside preferences use htmlentities
         parser = HTMLParser()
         username = parser.unescape(username)
         password = parser.unescape(password)
-    
-    r = HTTP.Request('http://www.italiansubs.net/index.php', cacheTime=0)
-    root = HTML.ElementFromString(r.content)
-    login_form = root.get_element_by_id('form-login')
+        self.username = username
+        self.password = password
+        if not username or not password:
+            Log.Debug('[ {} ] Username and password not set, impossible to continue.'.format(PLUGIN_NAME))
 
-    Log.Debug('[ {} ] Testing cookies if they are still valid'.format(PLUGIN_NAME))
-
-    if 'ciao '+Prefs['username1'].lower() in login_form.text_content().lower():
-        Log.Debug('[ {} ] Cookies are valid. Login OK'.format(PLUGIN_NAME))
+    def do_authcode(self):
+        try:
+            login = XML.ElementFromURL(self.LOGIN_URL.format(username=self.username, password=self.password, apikey=ITASA_KEY), cacheTime=0)
+        except:
+            Log.Debug('[ {} ] Error during connection for retrieving the authcode')
+            return None
+        if login.find('status').text == 'success':
+            authcode = login.find('.//authcode').text
+            Data.Save('authcode_itasa', authcode)
+            Log.Debug('[ {} ] Got Authcode. Authcode ok.'.format(PLUGIN_NAME))
+            self.authcode = authcode
+            return None
+        Log.Debug('[ {} ] Authcode retrieving failed. Impossible to continue'.format(PLUGIN_NAME))
         return None
-    Log.Debug('[ {} ] Cookies not valid or expired. Trying to login'.format(PLUGIN_NAME))
-    
-    data = {}
 
-    for el in login_form:
-        if 'type' in el.attrib:
-            if el.attrib['type'] == 'hidden':
-                data[el.attrib['name']] = el.attrib['value']
-
-    data.update({'username':username, 'passwd': password})
-    r = HTTP.Request('http://www.italiansubs.net/index.php', values=data)
-    HTTP.CookiesForURL('http://www.italiansubs.net/')
-    Log.Debug('[ {} ] Login done. Cookies saved'.format(PLUGIN_NAME))
-    return None
+    def do_login(self):
+        login_form = HTML.ElementFromURL(self.ITASA_HOME, cacheTime=0).get_element_by_id('form-login')
+        data_login = {'username': self.username, 'passwd': self.password}
+        for el in login_form:
+            try:
+                if el.attrib['type'] == 'hidden':
+                    data_login[el.attrib['name']] = el.attrib['value']
+            except KeyError:
+                continue
+        req = HTTP.Request(self.ITASA_HOME, values=data_login, cacheTime=0)
+        HTTP.CookiesForURL(self.ITASA_HOME)
+        if 'nome utente e password non sono corrette' not in req.content.lower():
+            Log.Debug('[ {} ] Login failed. Are Username/Password correct?')
+            return None
+        if 'ciao ' + self.username not in req.content.lower():
+            Log.Debug('[ {} ] Login failed. Unknown error.'.format(PLUGIN_NAME))
+            return None
+        Log.Debug('[ {} ] Login done. Cookies saved'.format(PLUGIN_NAME))
 
 
 ITASA_KEY = b64decode(ITASA_KEY)
@@ -204,11 +200,26 @@ class Subtitles(object):
         return [sub for sub in subtitles if sub['version'] == 'normale']
 
     def download(self, subtitles):
-        authcode = get_authcode_itasubs()
-        login_itasubs()
+        login = Login_Itasa()
         for subtitle in subtitles:
-            url = ITASA_SUBTITLE_DOWNLOAD.format(subtitle['id'], authcode, ITASA_KEY)
-            file = HTTP.Request(url, cacheTime=0)
+            content_type = ''
+            attempts = 0
+            while 'application/zip' not in content_type:
+                url = ITASA_SUBTITLE_DOWNLOAD.format(subtitle['id'], login.authcode, ITASA_KEY)
+                file = HTTP.Request(url, cacheTime=0)
+                content_type = file.headers['content-type']
+                if 'text/xml' in content_type:
+                    Log.Debug('[ {} ] Authcode not valid. Trying to retrieve it..'.format(PLUGIN_NAME))
+                    login.do_authcode()
+                if 'text/html' in content_type and 'utenti registrati' in file.content:
+                    Log.Debug('[ {} ] Not logged. Trying to log in'.format(PLUGIN_NAME))
+                    login.do_login()
+                if 'text/html' in content_type and 'limite di download' in file.content:
+                    Log.Debug('[ {} ] You have reached the download limit for this subtitle'.format(PLUGIN_NAME))
+                    break
+                if attempts > 5:
+                    break
+                attempts =+ 1
             filebuffer = StringIO()
             filebuffer.write(file)
             filebuffer.flush()
