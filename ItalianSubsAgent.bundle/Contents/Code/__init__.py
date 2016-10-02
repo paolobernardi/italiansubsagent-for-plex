@@ -28,57 +28,64 @@ def Start():
     Log.Debug('ItaSubsAgent started!')
     HTTP.Headers['User-Agent'] = 'ItalianSubs Plugin for Plex (v2)'
 
-def get_shows():
-    Log.Debug('[ {} ] Getting shows list from ItalianSubs'.format(PLUGIN_NAME))
-    r = HTTP.Request(ITASA_SHOWS.format(ITASA_KEY))
-    root = XML.ElementFromString(r.content)
 
-    results = []
-    for tvshow in root.getiterator(tag='show'):
-        try:
-          id_t = tvshow.find('id').text.strip()
-        except AttributeError:
-          continue
-        try:
-          name_t = tvshow.find('name').text.strip()
-        except AttributeError:
-          continue
-        results.append((name_t, id_t))
-    if results:
-        Log.Debug('[ {} ] Fetching done. There are {} shows'.format(PLUGIN_NAME, len(results)))
-    else:
-        Log.Debug('[ {} ]Fetching failed'.format(PLUGIN_NAME))    
-    return results
+class Shows(object):
+    SHOWS_URL = 'https://api.italiansubs.net/api/rest/shows?apikey={apikey}'
+    SHOW_URL = 'https://api.italiansubs.net/api/rest/shows/{id_show}?apikey={apikey}'
 
-def doSearch(name, tvdb_id):
-    Log.Debug('[ {} ] Searching the show {} (TVDBid: {}) in ItalianSubs shows'.format(PLUGIN_NAME, name, tvdb_id))
-    shows = get_shows()
-    res = []
-    junk = lambda x: x in ' of the'
-    for name_show, id_show in shows:
-        show_score = SequenceMatcher(junk, name, name_show).ratio()
-        show_score = round(show_score * 100, 3)
-        res.append((show_score, name_show, id_show))
-    res = sorted(res, key=lambda x: -x[0])[:10]
-    Log.Debug('[ {} ] Best show found: {}'.format(PLUGIN_NAME, res))
-    for show_score, name_show, id_show in res:
+    def __init__(self, name_show, tvdb_id=None):
+        self.name_show = name_show
+        self.tvdb_id = tvdb_id
+        self.get_shows_list()
+        Log.Debug('[ {} ] Searching the show {} (TVDBid: {}) in ItalianSubs shows'.format(PLUGIN_NAME, name_show, tvdb_id))
+
+    def get_shows_list(self):
+        Log.Debug('[ {} ] Getting shows list from ItalianSubs'.format(PLUGIN_NAME))
+        shows = XML.ElementFromURL(self.SHOWS_URL.format(apikey=ITASA_KEY))
+        res = []
+        for show in shows.getiterator(tag='show'):
+            try:
+                id_show = show.find('id').text.strip()
+            except AttributeError:
+                continue
+            try:
+                name_show = show.find('name').text.strip()
+            except AttributeError:
+                continue
+            if name_show and id_show:
+                res.append((name_show, id_show))
+        Log.Debug('[ {} ] Fetching done. There are {} shows'.format(PLUGIN_NAME, len(res)))
+        self.shows_list = res
+        return None
+
+    def get_id_show(self):
+        res = []
+        junk = lambda x: x in ' of the'
+        for name_show, id_show in self.shows_list:
+            show_score = SequenceMatcher(junk, self.name_show, name_show).ratio()
+            show_score = round(show_score * 100, 3)
+            res.append((show_score, name_show, id_show))
+        res = sorted(res, key=lambda x: -x[0])[:10]
+        Log.Debug('[ {} ] Best show found: {}'.format(PLUGIN_NAME, res))
+        for show_score, name_show, id_show in res:
+            try:
+                tvdb_id = XML.ElementFromURL(self.SHOW_URL.format(id_show=id_show, apikey=ITASA_KEY)).find('.//id_tvdb').text
+            except:
+                Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME, self.name_show, id_show))
+                continue
+            if self.tvdb_id == tvdb_id:
+                Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME, self.name_show, id_show))
+                return id_show
         try:
-            if tvdb_id == XML.ElementFromURL(ITASA_SHOW.format(id_show, ITASA_KEY)).find('.//id_tvdb').text:
-                Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME,name, id_show))
-            return id_show
-        except:
-            Log.Debug('[ {} ] 404 error for {}. ID on ItalianSubs: {}'.format(PLUGIN_NAME,name, id_show))
-            continue
-    try:
-        show_score, name_show, id_show = res[0]
-    except IndexError:
-        pass
-    else:
-        if show_score > 75:
-            Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>75) method)'.format(PLUGIN_NAME,name, id_show))
-            return id_show
-    Log.Debug('[ {} ] No matches found for {}'.format(PLUGIN_NAME, name))
-    return None
+            show_score, name_show, id_show = res[0]
+        except IndexError:
+            pass
+        else:
+            if show_score > 75:
+                Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>75) method)'.format(PLUGIN_NAME, self.name_show, id_show))
+                return id_show
+        Log.Debug('[ {} ] No matches found for {} (TVDBid: {})'.format(PLUGIN_NAME, self.name_show, self.tvdb_id))
+        return None
 
 
 class Login_Itasa(object):
@@ -291,6 +298,7 @@ class Subtitles(object):
     def return_subtitles(self):
         return [(sub_hash, sub_content) for subtitle in self.subtitles for sub_hash, sub_content in subtitle['subs']]
 
+
 def get_tvdb_id(guid):
     if 'thetvdb' not in guid:
         return 0
@@ -319,7 +327,7 @@ class ItalianSubsAgent(Agent.TV_Shows):
                         name_show = media.title
                         tvdb_id = get_tvdb_id(media.guid)
                         filename = part.file
-                        id_show = doSearch(name_show, tvdb_id)
+                        id_show = Shows(name_show, tvdb_id).get_id_show()
                         if not id_show:
                             return None
                         subtitles = Subtitles(id_show, name_show, filename, season, episode).get().return_subtitles()
