@@ -372,6 +372,23 @@ def get_tvdb_id(guid):
     return tvdb_id
 
 
+def add_subtitles(part, subtitles, name, season=None, episode=None):
+    donot_add = Prefs['donot_add']
+    if donot_add:
+        Log.Debug('[ {} ] Subtitle not added. Do not add to Plex option was selected'.format(PLUGIN_NAME))
+        return None
+    if season and episode:
+        episode = ' {season}x{episode}'.format(season=season, episode=episode.zfill(2))
+    else:
+        episode = ''
+    if not subtitles:
+        Log.Debug('[ {} ] Subtitle for {name}{episode} NOT added!'.format(PLUGIN_NAME, name=name, episode=episode))
+    for sub_hash, sub_content in subtitles:
+        part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
+        Log.Debug('[ {} ] Subtitle for {name}{episode} added!'.format(PLUGIN_NAME, name=name, episode=episode))
+    return None
+
+
 class ItalianSubsAgent(Agent.TV_Shows):
     name = 'ItalianSubsAgent'
     languages = [Locale.Language.English, ]
@@ -394,9 +411,7 @@ class ItalianSubsAgent(Agent.TV_Shows):
                         if not id_show:
                             return None
                         subtitles = Subtitles(id_show, name_show, filename, season, episode).get().return_subtitles()
-                        for sub_hash, sub_content in subtitles:
-                            part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
-                            Log.Debug('[ {} ] Subtitle for {} {}x{} added!'.format(PLUGIN_NAME, name_show, season, episode.zfill(2)))
+                        add_subtitles(part, subtitles, name_show, season, episode)
 
 
 class ItalianSubsAgentMovie(Agent.Movies):
@@ -413,6 +428,4 @@ class ItalianSubsAgentMovie(Agent.Movies):
                 name_movie = media.title
                 filename = part.file
                 subtitles = Subtitles_Movies(name_movie, filename).get().return_subtitles()
-                for sub_hash, sub_content in subtitles:
-                    part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
-                    Log.Debug('[ {} ] Subtitle for {} added!'.format(PLUGIN_NAME, name_movie))
+                add_subtitles(part, subtitles, name_movie)
