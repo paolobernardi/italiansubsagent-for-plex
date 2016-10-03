@@ -1,6 +1,7 @@
 import hashlib
 import os
 import io
+import time
 from StringIO import StringIO
 from zipfile import ZipFile
 from __builtin__ import dir
@@ -32,6 +33,7 @@ def Start():
 class Shows(object):
     SHOWS_URL = 'https://api.italiansubs.net/api/rest/shows?apikey={apikey}'
     SHOW_URL = 'https://api.italiansubs.net/api/rest/shows/{id_show}?apikey={apikey}'
+    SLEEP_TIME = 3
 
     def __init__(self, name_show, tvdb_id=None):
         self.name_show = name_show
@@ -60,14 +62,14 @@ class Shows(object):
 
     def get_id_show(self):
         res = []
-        junk = lambda x: x in ' of the'
+        junk = lambda x: x in ' of the \'s :'
         for name_show, id_show in self.shows_list:
             show_score = SequenceMatcher(junk, self.name_show, name_show).ratio()
             show_score = round(show_score * 100, 3)
             res.append((show_score, name_show, id_show))
-        res = sorted(res, key=lambda x: -x[0])[:10]
+        res = sorted(res, key=lambda x: -x[0])[:50]
         Log.Debug('[ {} ] Best show found: {}'.format(PLUGIN_NAME, res))
-        for show_score, name_show, id_show in res:
+        for i, (show_score, name_show, id_show) in enumerate(res):
             try:
                 tvdb_id = XML.ElementFromURL(self.SHOW_URL.format(id_show=id_show, apikey=ITASA_KEY)).find('.//id_tvdb').text
             except:
@@ -76,6 +78,9 @@ class Shows(object):
             if self.tvdb_id == tvdb_id:
                 Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (TvDbId method)'.format(PLUGIN_NAME, self.name_show, id_show))
                 return id_show
+            if i % 10 == 0:
+                Log.Debug('[ {} ] Evaluated 10 shows. Pause for {} secs'.format(PLUGIN_NAME, self.SLEEP_TIME))
+                time.sleep(self.SLEEP_TIME)
         try:
             show_score, name_show, id_show = res[0]
         except IndexError:
@@ -301,6 +306,7 @@ class Subtitles(object):
 
 
 class Subtitles_Movies(Subtitles):
+    SLEEP_TIME = 2
     def __init__(self, name_movie, filename):
         self.id_show = ''
         self.name_show = name_movie
@@ -352,11 +358,12 @@ class Subtitles_Movies(Subtitles):
                 if best_movie['score'] > 90:
                     Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>90) method)'.format(PLUGIN_NAME, self.name_movie, best_movie['id']))
                     return best_movie
-            next_page = subtitles.find('.//next').text.strip()
+            next_page = subtitles.find('.//next').text
             if next_page:
                 res = []
-                url = next_page
-                Log.Debug('[ {} ] No movies found yet. Trying to scan the next page.'.format(PLUGIN_NAME))
+                url = next_page.strip()
+                Log.Debug('[ {} ] No movies found yet. Trying to scan the next page. Pausing for {} secs'.format(PLUGIN_NAME, self.SLEEP_TIME))
+                time.sleep(self.SLEEP_TIME)
             else:
                 break
         return None
