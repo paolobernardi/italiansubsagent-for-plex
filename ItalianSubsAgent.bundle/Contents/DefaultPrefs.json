@@ -23,5 +23,11 @@
                 "type": "bool",
                 "secure": "false"
         },
+        {
+                "id": "donot_add",
+                "label": "DO NOT add subtitle in Plex Library",
+                "type": "bool",
+                "secure": "false"
+        }
 
 ]
