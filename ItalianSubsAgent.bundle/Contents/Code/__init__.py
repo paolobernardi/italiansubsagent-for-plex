@@ -159,6 +159,7 @@ class Subtitles(object):
         Log.Debug('[ {} ] Found special case: {}'.format(PLUGIN_NAME, self.specialcase)) if self.specialcase else ''
         self.all_subs = Prefs['all_subs']
         self.copy_subs = Prefs['copy_subs']
+        self.extract_all = False
         self.subtitles = []
 
     def detect_specialcase(self):
@@ -247,7 +248,7 @@ class Subtitles(object):
             Log.Debug('[ {} ] Error opening the ZipFile'.format(PLUGIN_NAME))
             return res
         for name_sub in zipfile.namelist():
-            if episode in name_sub.lower():
+            if episode in name_sub.lower() or self.extract_all:
                 try:
                     sub_content = zipfile.open(name_sub).read()
                 except:
@@ -299,6 +300,68 @@ class Subtitles(object):
         return [(sub_hash, sub_content) for subtitle in self.subtitles for sub_hash, sub_content in subtitle['subs']]
 
 
+class Subtitles_Movies(Subtitles):
+    def __init__(self, name_movie, filename):
+        self.id_show = ''
+        self.name_show = name_movie
+        self.name_movie = name_movie
+        self.filename = filename
+        self.season = ''
+        self.episode = ''
+        self.specialcase = self.detect_specialcase()
+        Log.Debug('[ {} ] Found special case: {}'.format(PLUGIN_NAME, self.specialcase)) if self.specialcase else ''
+        self.all_subs = Prefs['all_subs']
+        self.copy_subs = Prefs['copy_subs']
+        self.extract_all = True
+        self.subtitles = []
+
+    def search(self, complete=None):
+        if complete:
+            return []
+        Log.Debug('[ {} ] Start searching movie {} ..'.format(PLUGIN_NAME, self.name_movie))
+        movie = self.search_movies(name_movie=self.name_movie)
+        if movie:
+            return self.search_movies(name_movie=movie['name'], all_versions=True)
+        return []
+
+    def search_movies(self, name_movie, all_versions=None):
+        url = ITASA_SUBTITLES_SEARCH.format(query=name_movie if all_versions else '', id_show=8, apikey=ITASA_KEY)
+        res = []
+        junk = lambda x: x in ' of the'
+        while True:
+            subtitles = XML.ElementFromURL(url)
+            for subtitle in subtitles.getiterator('subtitle'):
+                name = subtitle.find('name').text
+                subtitle = {
+                    'name': name,
+                    'id': subtitle.find('id').text,
+                    'version': subtitle.find('version').text.lower(),
+                    'subs': [],
+                    'score': round(SequenceMatcher(junk, name_movie, name).ratio() * 100, 3)
+                }
+                if subtitle not in res:
+                    res.append(subtitle)
+            if all_versions:
+                return res
+            res = sorted(res, key=lambda movie: -movie['score'])
+            try:
+                best_movie = res[0]
+            except IndexError:
+                pass
+            else:
+                if best_movie['score'] > 90:
+                    Log.Debug('[ {} ] Match found for {}. ID on ItalianSubs: {} (Best score (>90) method)'.format(PLUGIN_NAME, self.name_movie, best_movie['id']))
+                    return best_movie
+            next_page = subtitles.find('.//next').text.strip()
+            if next_page:
+                res = []
+                url = next_page
+                Log.Debug('[ {} ] No movies found yet. Trying to scan the next page.'.format(PLUGIN_NAME))
+            else:
+                break
+        return None
+
+
 def get_tvdb_id(guid):
     if 'thetvdb' not in guid:
         return 0
@@ -335,3 +398,21 @@ class ItalianSubsAgent(Agent.TV_Shows):
                             part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
                             Log.Debug('[ {} ] Subtitle for {} {}x{} added!'.format(PLUGIN_NAME, name_show, season, episode.zfill(2)))
 
+
+class ItalianSubsAgentMovie(Agent.Movies):
+    name = 'ItalianSubsAgent'
+    languages = [Locale.Language.English, ]
+    primary_provider = False
+
+    def search(self, results, media, lang, manual=True):
+        results.Append(MetadataSearchResult(id='null', score=100))
+
+    def update(self, metadata, media, lang, force=True):
+        for items in media.items:
+            for part in items.parts:
+                name_movie = media.title
+                filename = part.file
+                subtitles = Subtitles_Movies(name_movie, filename).get().return_subtitles()
+                for sub_hash, sub_content in subtitles:
+                    part.subtitles['it'][sub_hash] = Proxy.Media(sub_content, ext='srt')
+                    Log.Debug('[ {} ] Subtitle for {} added!'.format(PLUGIN_NAME, name_movie))
