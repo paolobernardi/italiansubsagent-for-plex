@@ -234,7 +234,7 @@ class Subtitles(object):
                     break
                 if attempts > 5:
                     break
-                attempts =+ 1
+                attempts += 1
             filebuffer = StringIO()
             filebuffer.write(file)
             filebuffer.flush()
@@ -307,6 +307,7 @@ class Subtitles(object):
 
 class Subtitles_Movies(Subtitles):
     SLEEP_TIME = 2
+
     def __init__(self, name_movie, filename):
         self.id_show = ''
         self.name_show = name_movie
@@ -421,7 +422,7 @@ class ItalianSubsAgent(Agent.TV_Shows):
                         add_subtitles(part, subtitles, name_show, season, episode)
 
 
-class ItalianSubsAgentMovie(Agent.Movies):
+class ItalianSubsAgentMovies(Agent.Movies):
     name = 'ItalianSubsAgent'
     languages = [Locale.Language.English, ]
     primary_provider = False
