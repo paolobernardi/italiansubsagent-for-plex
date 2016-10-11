@@ -144,7 +144,7 @@ class Login_Itasa(object):
         if 'nome utente e password non sono corrette' not in req.content.lower():
             Log.Debug('[ {} ] Login failed. Are Username/Password correct?')
             return None
-        if 'ciao ' + self.username not in req.content.lower():
+        if 'ciao ' + self.username.lower() not in req.content.lower():
             Log.Debug('[ {} ] Login failed. Unknown error.'.format(PLUGIN_NAME))
             return None
         Log.Debug('[ {} ] Login done. Cookies saved'.format(PLUGIN_NAME))
