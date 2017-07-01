@@ -96,7 +96,7 @@ class Shows(object):
 class Login_Itasa(object):
     LOGIN_URL = 'https://api.italiansubs.net/api/rest/users/login?username={username}&password={password}&apikey={apikey}'
     USER_URL = 'https://api.italiansubs.net/api/rest/users/?authcode={authcode}&apikey={apikey}'
-    ITASA_HOME = 'http://www.italiansubs.net/'
+    ITASA_HOME = 'https://www.italiansubs.net/'
 
     def __init__(self):
         self.get_credentials()
@@ -142,7 +142,7 @@ class Login_Itasa(object):
         req = HTTP.Request(self.ITASA_HOME, values=data_login, cacheTime=0)
         HTTP.CookiesForURL(self.ITASA_HOME)
         if 'nome utente e password non sono corrette' not in req.content.lower():
-            Log.Debug('[ {} ] Login failed. Are Username/Password correct?')
+            Log.Debug('[ {} ] Login failed. Are Username/Password correct?'.format(PLUGIN_NAME))
             return None
         if 'ciao ' + self.username.lower() not in req.content.lower():
             Log.Debug('[ {} ] Login failed. Unknown error.'.format(PLUGIN_NAME))
